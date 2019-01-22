@@ -1,4 +1,4 @@
-package pagecursor
+package mongocursor
 
 import (
 	"encoding/base64"

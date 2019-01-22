@@ -1,4 +1,4 @@
-package pagecursor
+package mongocursor
 
 import (
 	"github.com/mongodb/mongo-go-driver/bson"
