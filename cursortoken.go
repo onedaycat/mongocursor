@@ -23,12 +23,12 @@ func CreateToken(currentToken string, limit, length int, sortValueHandler SortVa
 	firstSortValue = sortValueHandler(0)
 	lastSortValue = sortValueHandler(slicedLength - 1)
 
-	return createNextToken(2, length, lastSortValue),
+	return createNextToken(limit, length, lastSortValue),
 		createPrevToken(currentToken, firstSortValue)
 }
 
 func createNextToken(limit, length int, sortedValues []interface{}) string {
-	if length <= limit {
+	if length <= limit || limit == 0 {
 		return ""
 	}
 

@@ -160,4 +160,8 @@ func main() {
 	result8 := getItemsFromAggreation(ctx, client, 2, result6.NextToken)
 	fmt.Println(result8)
 	fmt.Println("")
+
+	result9 := getItemsFromAggreation(ctx, client, 0, "")
+	fmt.Println(result9)
+	fmt.Println("")
 }
