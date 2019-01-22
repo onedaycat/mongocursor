@@ -8,7 +8,6 @@ import (
 
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo"
-	"github.com/onedaycat/pagecursor"
 )
 
 type Pag struct {
@@ -42,7 +41,7 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 		},
 	}
 
-	query := pagecursor.NewQueryBuilder(limit, token).
+	query := mongocursor.NewQueryBuilder(limit, token).
 		Sort("name", -1).
 		Sort("_id", 1).
 		Filter(filter).
@@ -61,7 +60,7 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 		pags = append(pags, doc)
 	}
 
-	nextToken, prevToken := pagecursor.CreateToken(token, limit, len(pags),
+	nextToken, prevToken := mongocursor.CreateToken(token, limit, len(pags),
 		func(index int) []interface{} {
 			return []interface{}{pags[index].Name, pags[index].ID}
 		},
@@ -82,7 +81,7 @@ func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, toke
 		{"_id", bson.D{{"$ne", "10"}}},
 	}
 
-	query, options := pagecursor.NewQueryBuilder(limit, token).
+	query, options := mongocursor.NewQueryBuilder(limit, token).
 		Sort("name", -1).
 		Sort("_id", 1).
 		Filter(filter).
@@ -101,7 +100,7 @@ func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, toke
 		pags = append(pags, doc)
 	}
 
-	nextToken, prevToken := pagecursor.CreateToken(token, limit, len(pags),
+	nextToken, prevToken := mongocursor.CreateToken(token, limit, len(pags),
 		func(index int) []interface{} {
 			return []interface{}{pags[index].Name, pags[index].ID}
 		},
