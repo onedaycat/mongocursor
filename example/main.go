@@ -49,11 +49,12 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 		},
 	}
 
-	query := mongocursor.NewQueryBuilder(limit, token).
+	query := mongocursor.NewBuilder(limit, token).
 		Sort("name", -1).
+		Sort("n", -1).
 		Sort("_id", 1).
 		Aggregate(agg).
-		BuildAggregation()
+		BuildAggregate()
 	fmt.Println("Aggregate:", query)
 
 	cursor, err := client.Database("testpage").Collection("pag").Aggregate(ctx, query)
@@ -70,7 +71,7 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 
 	nextToken, prevToken := mongocursor.CreateToken(token, limit, len(pags),
 		func(index int) []interface{} {
-			return []interface{}{pags[index].Name, pags[index].ID}
+			return []interface{}{pags[index].Name, pags[index].N, pags[index].ID}
 		},
 		func(index int) {
 			pags = pags[:index]
@@ -89,8 +90,9 @@ func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, toke
 		{"_id", bson.D{{"$ne", "10"}}},
 	}
 
-	query, options := mongocursor.NewQueryBuilder(limit, token).
+	query, options := mongocursor.NewBuilder(limit, token).
 		Sort("name", -1).
+		Sort("n", -1).
 		Sort("_id", 1).
 		Find(find).
 		BuildFind()
@@ -110,7 +112,7 @@ func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, toke
 
 	nextToken, prevToken := mongocursor.CreateToken(token, limit, len(pags),
 		func(index int) []interface{} {
-			return []interface{}{pags[index].Name, pags[index].ID}
+			return []interface{}{pags[index].Name, pags[index].N, pags[index].ID}
 		},
 		func(index int) {
 			pags = pags[:index]

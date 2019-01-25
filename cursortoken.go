@@ -14,7 +14,8 @@ func CreateToken(currentToken string, limit, length int, sortValueHandler SortVa
 	var firstSortValue []interface{}
 	var lastSortValue []interface{}
 	slicedLength := length
-	if length == 0 {
+
+	if limit == 0 || length == 0 {
 		return "", ""
 	}
 
@@ -68,14 +69,16 @@ func createPrevToken(token string, sortedValues []interface{}) string {
 	return base64.URLEncoding.EncodeToString(cfByte)
 }
 
-func decodeToken(token string) (CursorFields, error) {
+func decodeToken(token string) CursorFields {
 	cfByte, err := base64.URLEncoding.DecodeString(token)
 	if err != nil {
-		return nil, err
+		return nil
 	}
 
 	cf := CursorFields{}
-	_, err = cf.UnmarshalMsg(cfByte)
+	if _, err = cf.UnmarshalMsg(cfByte); err != nil {
+		return nil
+	}
 
-	return cf, err
+	return cf
 }
