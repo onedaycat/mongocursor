@@ -14,6 +14,9 @@ func CreateToken(currentToken string, limit, length int, sortValueHandler SortVa
 	var firstSortValue []interface{}
 	var lastSortValue []interface{}
 	slicedLength := length
+	if length == 0 {
+		return "", ""
+	}
 
 	if limit != 0 && length > limit {
 		slicedLength = length - 1
