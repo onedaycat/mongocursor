@@ -178,32 +178,6 @@ func (c *QueryCursorBuilder) createOrQuery(n int) bson.E {
 	return bson.E{xor, orQuery}
 }
 
-func (c *QueryCursorBuilder) createSortQuery(n int) bson.A {
-	orQuery := make(bson.A, 0, n)
-	if c.values != nil {
-		for i := 0; i < n; i++ {
-			if i == 0 {
-				orQuery = append(orQuery, bson.D{
-					{c.sortFields[0], bson.D{
-						{c.sortNames[0], c.values[0]},
-					}},
-				})
-			} else {
-				orQuery = append(orQuery, bson.D{
-					{c.sortFields[0], c.values[0]},
-					{c.sortFields[i], bson.D{
-						{c.sortNames[i], c.values[i]},
-					}},
-				})
-			}
-		}
-
-		return orQuery
-	}
-
-	return nil
-}
-
 func (c *QueryCursorBuilder) createAggregation(cursorAgg, sort bson.D) bson.A {
 	agg := make(bson.A, 0, len(c.agg)+3)
 	agg = append(agg, c.agg...)
@@ -221,19 +195,6 @@ func (c *QueryCursorBuilder) createAggregation(cursorAgg, sort bson.D) bson.A {
 	}
 
 	return agg
-}
-
-func (c *QueryCursorBuilder) mergeFind(n int) bson.D {
-	if c.find == nil {
-		return make(bson.D, 0, n)
-	}
-
-	find := make(bson.D, 0, len(c.find)+n)
-	for i := 0; i < len(c.find); i++ {
-		find = append(find, c.find[i])
-	}
-
-	return find
 }
 
 func (c *QueryCursorBuilder) parseToken(token string) {
