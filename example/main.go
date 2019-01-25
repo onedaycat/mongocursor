@@ -36,18 +36,25 @@ func (r *Result) String() string {
 }
 
 func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int, token string) *Result {
-	filter := bson.D{
-		{"$match", bson.D{
-			{"_id", bson.D{{"$ne", "10"}}}},
+	agg := bson.A{
+		bson.D{
+			{"$match", bson.D{
+				{"_id", bson.D{{"$ne", "10"}}}},
+			},
+		},
+		bson.D{
+			{"$match", bson.D{
+				{"_id", bson.D{{"$ne", "11"}}}},
+			},
 		},
 	}
 
 	query := mongocursor.NewQueryBuilder(limit, token).
 		Sort("name", -1).
 		Sort("_id", 1).
-		Filter(filter).
+		Aggregate(agg).
 		BuildAggregation()
-	fmt.Println("Filter:", query)
+	fmt.Println("Aggregate:", query)
 
 	cursor, err := client.Database("testpage").Collection("pag").Aggregate(ctx, query)
 	if err != nil {
@@ -78,16 +85,16 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 }
 
 func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, token string) *Result {
-	filter := bson.D{
+	find := bson.D{
 		{"_id", bson.D{{"$ne", "10"}}},
 	}
 
 	query, options := mongocursor.NewQueryBuilder(limit, token).
 		Sort("name", -1).
 		Sort("_id", 1).
-		Filter(filter).
+		Find(find).
 		BuildFind()
-	fmt.Println("Filter:", query)
+	fmt.Println("Find:", query)
 
 	cursor, err := client.Database("testpage").Collection("pag").Find(ctx, query, options)
 	if err != nil {

@@ -11,7 +11,8 @@ type QueryCursorBuilder struct {
 	sortNames  []string
 	values     []interface{}
 	limit      int64
-	filter     bson.D
+	find       bson.D
+	agg        bson.A
 	equalComp  string
 }
 
@@ -40,25 +41,30 @@ func (c *QueryCursorBuilder) Sort(sortField string, sort int) *QueryCursorBuilde
 	return c
 }
 
-func (c *QueryCursorBuilder) Filter(filter bson.D) *QueryCursorBuilder {
-	c.filter = filter
+func (c *QueryCursorBuilder) Find(find bson.D) *QueryCursorBuilder {
+	c.find = find
+	return c
+}
+
+func (c *QueryCursorBuilder) Aggregate(agg bson.A) *QueryCursorBuilder {
+	c.agg = agg
 	return c
 }
 
 func (c *QueryCursorBuilder) BuildFind() (bson.D, *options.FindOptions) {
 	n := len(c.sortFields)
 	opts := options.Find().SetLimit(c.limit + 1)
-	filter := c.mergeFilter(1)
+	find := c.mergeFind(1)
 
 	switch n {
 	case 0:
-		return filter, opts
+		return find, opts
 	case 1:
-		filter = append(filter, bson.E{c.sortFields[0], bson.D{
+		find = append(find, bson.E{c.sortFields[0], bson.D{
 			{c.sortNames[0], c.values[0]},
 		}})
 
-		return filter, opts.SetSort(bson.D{{c.sortFields[0], c.sorts[0]}})
+		return find, opts.SetSort(bson.D{{c.sortFields[0], c.sorts[0]}})
 	}
 
 	orQuery := make(bson.A, 0, n)
@@ -85,21 +91,20 @@ func (c *QueryCursorBuilder) BuildFind() (bson.D, *options.FindOptions) {
 			}
 		}
 
-		filter = append(filter, bson.E{"$or", orQuery})
+		find = append(find, bson.E{"$or", orQuery})
 	}
 
-	return filter, opts.SetSort(sorts)
+	return find, opts.SetSort(sorts)
 }
 
 func (c *QueryCursorBuilder) BuildAggregation() bson.A {
 	n := len(c.sortFields)
-	filter := c.mergeFilter(3)
 
 	switch n {
 	case 0:
-		return c.createAggregation(filter, nil, nil)
+		return c.createAggregation(nil, nil)
 	case 1:
-		cursorFilter := bson.D{
+		cursorAgg := bson.D{
 			{c.sortFields[0], bson.D{
 				{c.sortNames[0], c.values[0]},
 			}},
@@ -107,10 +112,10 @@ func (c *QueryCursorBuilder) BuildAggregation() bson.A {
 
 		sorts := bson.D{{c.sortFields[0], c.sorts[0]}}
 
-		return c.createAggregation(filter, cursorFilter, sorts)
+		return c.createAggregation(cursorAgg, sorts)
 	}
 
-	var cursorFilter bson.D
+	var cursorAgg bson.D
 	orQuery := make(bson.A, 0, n)
 	sorts := make(bson.D, n)
 	for i := 0; i < n; i++ {
@@ -135,19 +140,19 @@ func (c *QueryCursorBuilder) BuildAggregation() bson.A {
 			}
 		}
 
-		cursorFilter = bson.D{{"$or", orQuery}}
+		cursorAgg = bson.D{{"$or", orQuery}}
 
 	}
 
-	return c.createAggregation(filter, cursorFilter, sorts)
+	return c.createAggregation(cursorAgg, sorts)
 }
 
-func (c *QueryCursorBuilder) createAggregation(filter, cursorFilter, sort bson.D) bson.A {
-	agg := make(bson.A, 0, 4)
-	agg = append(agg, filter)
+func (c *QueryCursorBuilder) createAggregation(cursorAgg, sort bson.D) bson.A {
+	agg := make(bson.A, 0, len(c.agg)+3)
+	agg = append(agg, c.agg...)
 
-	if cursorFilter != nil {
-		agg = append(agg, bson.D{{"$match", cursorFilter}})
+	if cursorAgg != nil {
+		agg = append(agg, bson.D{{"$match", cursorAgg}})
 	}
 
 	if sort != nil {
@@ -161,17 +166,17 @@ func (c *QueryCursorBuilder) createAggregation(filter, cursorFilter, sort bson.D
 	return agg
 }
 
-func (c *QueryCursorBuilder) mergeFilter(n int) bson.D {
-	if c.filter == nil {
+func (c *QueryCursorBuilder) mergeFind(n int) bson.D {
+	if c.find == nil {
 		return make(bson.D, 0, n)
 	}
 
-	filter := make(bson.D, 0, len(c.filter)+n)
-	for i := 0; i < len(c.filter); i++ {
-		filter = append(filter, c.filter[i])
+	find := make(bson.D, 0, len(c.find)+n)
+	for i := 0; i < len(c.find); i++ {
+		find = append(find, c.find[i])
 	}
 
-	return filter
+	return find
 }
 
 func (c *QueryCursorBuilder) parseToken(token string) {
