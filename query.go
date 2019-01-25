@@ -17,8 +17,14 @@ const (
 	emptyStr = ""
 )
 
+type sortField struct {
+	name string
+	dir  int
+	comp string
+}
+
 type QueryCursorBuilder struct {
-	sortFields  []string
+	sortFields  []sortField
 	sorts       []int
 	sortNames   []string
 	values      []interface{}
@@ -31,9 +37,7 @@ type QueryCursorBuilder struct {
 
 func NewBuilder(limit int, token string) *QueryCursorBuilder {
 	c := &QueryCursorBuilder{
-		sortFields: make([]string, 0, 3),
-		sorts:      make([]int, 0, 3),
-		sortNames:  make([]string, 0, 3),
+		sortFields: make([]sortField, 0, 3),
 	}
 
 	if limit < 0 {
@@ -48,22 +52,27 @@ func NewBuilder(limit int, token string) *QueryCursorBuilder {
 	return c
 }
 
-func (c *QueryCursorBuilder) Sort(sortField string, sort int) *QueryCursorBuilder {
-	c.sortFields = append(c.sortFields, sortField)
-	c.sorts = append(c.sorts, sort)
+func (c *QueryCursorBuilder) Sort(field string, sort int) *QueryCursorBuilder {
+	sortField := sortField{
+		name: field,
+		dir:  sort,
+	}
+
 	if c.isPrevToken {
 		if sort == -1 {
-			c.sortNames = append(c.sortNames, xgt)
+			sortField.comp = xgt
 		} else {
-			c.sortNames = append(c.sortNames, xlt)
+			sortField.comp = xlt
 		}
 	} else {
 		if sort == -1 {
-			c.sortNames = append(c.sortNames, xlt)
+			sortField.comp = xlt
 		} else {
-			c.sortNames = append(c.sortNames, xgt)
+			sortField.comp = xgt
 		}
 	}
+
+	c.sortFields = append(c.sortFields, sortField)
 
 	return c
 }
@@ -95,7 +104,7 @@ func (c *QueryCursorBuilder) BuildFind() (bson.D, *options.FindOptions) {
 
 	sorts := make(bson.D, n)
 	for i := 0; i < n; i++ {
-		sorts[i] = bson.E{c.sortFields[i], c.sorts[i]}
+		sorts[i] = bson.E{c.sortFields[i].name, c.sortFields[i].dir}
 	}
 	opts.SetSort(sorts)
 
@@ -118,7 +127,7 @@ func (c *QueryCursorBuilder) BuildAggregate() bson.A {
 
 	sorts := make(bson.D, n)
 	for i := 0; i < len(c.sortFields); i++ {
-		sorts[i] = bson.E{c.sortFields[i], c.sorts[i]}
+		sorts[i] = bson.E{c.sortFields[i].name, c.sortFields[i].dir}
 	}
 
 	if n == 1 {
@@ -151,8 +160,8 @@ func (c *QueryCursorBuilder) validate() {
 }
 
 func (c *QueryCursorBuilder) createSingleQuery() bson.E {
-	return bson.E{c.sortFields[0], bson.D{
-		{c.sortNames[0], c.values[0]},
+	return bson.E{c.sortFields[0].name, bson.D{
+		{c.sortFields[0].comp, c.values[0]},
 	}}
 }
 
@@ -161,15 +170,15 @@ func (c *QueryCursorBuilder) createOrQuery(n int) bson.E {
 	for i := 0; i < n; i++ {
 		if i == 0 {
 			orQuery = append(orQuery, bson.D{
-				{c.sortFields[0], bson.D{
-					{c.sortNames[0], c.values[0]},
+				{c.sortFields[0].name, bson.D{
+					{c.sortFields[0].comp, c.values[0]},
 				}},
 			})
 		} else {
 			orQuery = append(orQuery, bson.D{
-				{c.sortFields[0], c.values[0]},
-				{c.sortFields[i], bson.D{
-					{c.sortNames[i], c.values[i]},
+				{c.sortFields[0].name, c.values[0]},
+				{c.sortFields[i].name, bson.D{
+					{c.sortFields[i].comp, c.values[i]},
 				}},
 			})
 		}
