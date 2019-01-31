@@ -49,13 +49,16 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 		},
 	}
 
-	query := mongocursor.NewBuilder(limit, token).
+	query, err := mongocursor.NewBuilder(limit, token).
 		Sort("name", -1).
 		Sort("n", -1).
 		Sort("_id", 1).
 		Aggregate(agg).
 		BuildAggregate()
 	fmt.Println("Aggregate:", query)
+	if err != nil {
+		panic(err)
+	}
 
 	cursor, err := client.Database("testpage").Collection("pag").Aggregate(ctx, query)
 	if err != nil {
@@ -69,7 +72,7 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 		pags = append(pags, doc)
 	}
 
-	nextToken, prevToken := mongocursor.CreateToken(token, limit, len(pags),
+	nextToken, prevToken, err := mongocursor.CreateToken(token, limit, len(pags),
 		func(index int) []interface{} {
 			return []interface{}{pags[index].Name, pags[index].N, pags[index].ID}
 		},
@@ -77,6 +80,10 @@ func getItemsFromAggreation(ctx context.Context, client *mongo.Client, limit int
 			pags = pags[:index]
 		},
 	)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return &Result{
 		Items:     pags,
@@ -90,13 +97,16 @@ func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, toke
 		{"_id", bson.D{{"$ne", "10"}}},
 	}
 
-	query, options := mongocursor.NewBuilder(limit, token).
+	query, options, err := mongocursor.NewBuilder(limit, token).
 		Sort("name", -1).
 		Sort("n", -1).
 		Sort("_id", 1).
 		Find(find).
 		BuildFind()
 	fmt.Println("Find:", query)
+	if err != nil {
+		panic(err)
+	}
 
 	cursor, err := client.Database("testpage").Collection("pag").Find(ctx, query, options)
 	if err != nil {
@@ -110,7 +120,7 @@ func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, toke
 		pags = append(pags, doc)
 	}
 
-	nextToken, prevToken := mongocursor.CreateToken(token, limit, len(pags),
+	nextToken, prevToken, err := mongocursor.CreateToken(token, limit, len(pags),
 		func(index int) []interface{} {
 			return []interface{}{pags[index].Name, pags[index].N, pags[index].ID}
 		},
@@ -118,6 +128,10 @@ func getItemsFromFind(ctx context.Context, client *mongo.Client, limit int, toke
 			pags = pags[:index]
 		},
 	)
+
+	if err != nil {
+		panic(err)
+	}
 
 	return &Result{
 		Items:     pags,

@@ -79,7 +79,7 @@ func getItemsFromFind(limit int, token string) *result {
 		{"_id", bson.D{{"$ne", "10"}}},
 	}
 
-	query, options := NewBuilder(limit, token).
+	query, options, err := NewBuilder(limit, token).
 		Sort("a", -1).
 		Sort("_id", 1).
 		Find(find).
@@ -98,7 +98,7 @@ func getItemsFromFind(limit int, token string) *result {
 		docs = append(docs, doc)
 	}
 
-	nextToken, prevToken := CreateToken(token, limit, len(docs),
+	nextToken, prevToken, err := CreateToken(token, limit, len(docs),
 		func(index int) []interface{} {
 			return []interface{}{docs[index].A, docs[index].ID}
 		},

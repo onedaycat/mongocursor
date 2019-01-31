@@ -10,13 +10,13 @@ type CursorFields []interface{}
 type SortValueHandler func(index int) []interface{}
 type SliceLastItemHandler func(index int)
 
-func CreateToken(currentToken string, limit, length int, sortValueHandler SortValueHandler, sliceLastItemHandler SliceLastItemHandler) (string, string) {
+func CreateToken(currentToken string, limit, length int, sortValueHandler SortValueHandler, sliceLastItemHandler SliceLastItemHandler) (string, string, error) {
 	var firstSortValue []interface{}
 	var lastSortValue []interface{}
 	slicedLength := length
 
 	if limit == 0 || length == 0 {
-		return "", ""
+		return emptyStr, emptyStr, nil
 	}
 
 	if limit != 0 && length > limit {
@@ -27,16 +27,22 @@ func CreateToken(currentToken string, limit, length int, sortValueHandler SortVa
 	firstSortValue = sortValueHandler(0)
 	lastSortValue = sortValueHandler(slicedLength - 1)
 
-	return createNextToken(limit, length, lastSortValue),
-		createPrevToken(currentToken, firstSortValue)
+	nextToken, err := createNextToken(limit, length, lastSortValue)
+	if err != nil {
+		return emptyStr, emptyStr, err
+	}
+
+	prevToken := createPrevToken(currentToken, firstSortValue)
+
+	return nextToken, prevToken, nil
 }
 
-func CreateNextToken(currentToken string, limit, length int, sortValueHandler SortValueHandler, sliceLastItemHandler SliceLastItemHandler) string {
+func CreateNextToken(currentToken string, limit, length int, sortValueHandler SortValueHandler, sliceLastItemHandler SliceLastItemHandler) (string, error) {
 	var lastSortValue []interface{}
 	slicedLength := length
 
 	if limit == 0 || length == 0 {
-		return ""
+		return emptyStr, nil
 	}
 
 	if limit != 0 && length > limit {
@@ -49,9 +55,9 @@ func CreateNextToken(currentToken string, limit, length int, sortValueHandler So
 	return createNextToken(limit, length, lastSortValue)
 }
 
-func createNextToken(limit, length int, sortedValues []interface{}) string {
+func createNextToken(limit, length int, sortedValues []interface{}) (string, error) {
 	if length <= limit || limit == 0 {
-		return ""
+		return emptyStr, nil
 	}
 
 	cursorFields := make(CursorFields, 1, len(sortedValues)+1)
@@ -62,15 +68,15 @@ func createNextToken(limit, length int, sortedValues []interface{}) string {
 
 	cfByte, err := cursorFields.MarshalMsg(nil)
 	if err != nil {
-		panic(err)
+		return emptyStr, ErrUnableCreateNextToken
 	}
 
-	return base64.URLEncoding.EncodeToString(cfByte)
+	return base64.URLEncoding.EncodeToString(cfByte), nil
 }
 
 func createPrevToken(token string, sortedValues []interface{}) string {
-	if token == "" {
-		return ""
+	if token == emptyStr {
+		return emptyStr
 	}
 
 	cursorFields := make(CursorFields, 1, len(sortedValues)+1)
@@ -81,7 +87,7 @@ func createPrevToken(token string, sortedValues []interface{}) string {
 
 	cfByte, err := cursorFields.MarshalMsg(nil)
 	if err != nil {
-		return ""
+		return emptyStr
 	}
 
 	return base64.URLEncoding.EncodeToString(cfByte)

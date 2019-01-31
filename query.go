@@ -1,8 +1,6 @@
 package mongocursor
 
 import (
-	"errors"
-
 	"github.com/mongodb/mongo-go-driver/bson"
 	"github.com/mongodb/mongo-go-driver/mongo/options"
 )
@@ -93,8 +91,11 @@ func (c *QueryCursorBuilder) Aggregate(agg bson.A) *QueryCursorBuilder {
 	return c
 }
 
-func (c *QueryCursorBuilder) BuildFind() (bson.D, *options.FindOptions) {
-	c.validate()
+func (c *QueryCursorBuilder) BuildFind() (bson.D, *options.FindOptions, error) {
+	if err := c.validate(); err != nil {
+		return nil, nil, err
+	}
+
 	n := len(c.sortFields)
 
 	var opts *options.FindOptions
@@ -118,11 +119,14 @@ func (c *QueryCursorBuilder) BuildFind() (bson.D, *options.FindOptions) {
 		c.find = append(c.find, c.createOrQuery(n))
 	}
 
-	return c.find, opts
+	return c.find, opts, nil
 }
 
-func (c *QueryCursorBuilder) BuildAggregate() bson.A {
-	c.validate()
+func (c *QueryCursorBuilder) BuildAggregate() (bson.A, error) {
+	if err := c.validate(); err != nil {
+		return nil, err
+	}
+
 	n := len(c.sortFields)
 
 	sorts := make(bson.D, n)
@@ -132,31 +136,33 @@ func (c *QueryCursorBuilder) BuildAggregate() bson.A {
 
 	if n == 1 {
 		if c.values == nil {
-			return c.createAggregation(nil, sorts)
+			return c.createAggregation(nil, sorts), nil
 		}
 
-		return c.createAggregation(bson.D{c.createSingleQuery()}, sorts)
+		return c.createAggregation(bson.D{c.createSingleQuery()}, sorts), nil
 	} else if c.values != nil {
-		return c.createAggregation(bson.D{c.createOrQuery(n)}, sorts)
+		return c.createAggregation(bson.D{c.createOrQuery(n)}, sorts), nil
 	}
 
-	return c.createAggregation(nil, sorts)
+	return c.createAggregation(nil, sorts), nil
 }
 
-func (c *QueryCursorBuilder) validate() {
+func (c *QueryCursorBuilder) validate() error {
 	if len(c.sortFields) == 0 {
-		panic(errors.New("Cursor is required atleast one sort"))
+		return ErrNoSort
 	}
 
 	if c.token != emptyStr {
 		if c.values == nil {
-			panic(errors.New("No value in token"))
+			return ErrNoDataInToken
 		}
 
 		if len(c.values) < len(c.sortFields) {
-			panic(errors.New("Size of value in token must less than number of sort(s)"))
+			return ErrInsufficientTokenValue
 		}
 	}
+
+	return nil
 }
 
 func (c *QueryCursorBuilder) createSingleQuery() bson.E {
